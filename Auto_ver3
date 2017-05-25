@@ -1,0 +1,133 @@
+import pandas as pd
+import numpy as np
+from pandas import DataFrame, Series 
+from simple_salesforce import Salesforce #imported salesforce
+sf = Salesforce(username='xxxxx@xxx.com', password=xxxxxxxx', security_token = xxxxxxx) #loggedin
+import requests #imported requests
+session = requests.Session() #starting sessions
+from io import StringIO #to read web data
+
+error_report_defined = session.get("https://na4.salesforce.com/xxxxxxxxxx?export=1&enc=UTF-8&xf=csv".format(xxxxxxxxxxxx), headers=sf.headers, cookies={'sid': sf.session_id})
+df_sfdc_error_report_defined = pd.DataFrame.from_csv(StringIO(error_report_defined.text))
+df_sfdc_error_report_defined = df_sfdc_error_report_defined.to_csv('defined.csv', encoding = 'utf-8')
+error_report = pd.read_csv('defined.csv')
+print (error_report)
+error_report_except = session.get("https://na4.salesforce.com/xxxxxxxxxxx?export=1&enc=UTF-8&xf=csv".format(xxxxxxxxxx), headers=sf.headers, cookies={'sid': sf.session_id})
+df_sfdc_error_report_except= pd.DataFrame.from_csv(StringIO(error_report_except.text))
+df_sfdc_error_report_except = df_sfdc_error_report_except.to_csv('except.csv', encoding = 'utf-8')
+error_report_except = pd.read_csv('except.csv')
+
+staging_merged = pd.merge(error_report, error_report_except, on = ['Opportunity Header Staging Number'], how= 'outer')
+sliced_data_sub = staging_merged.loc[staging_merged['Error Code_y'].isnull()]
+sliced_data = sliced_data_sub.dropna(thresh=3)
+print(sliced_data)
+
+
+
+import datetime
+from datetime import datetime
+
+
+All_Data = session.get("https://na4.salesforce.com/xxxxxxxxxxxxxxx?export=1&enc=UTF-8&xf=csv".format(xxxxxxxxxxxxxxxxx), headers=sf.headers, cookies={'sid': sf.session_id})
+df_sfdc_all_data= pd.DataFrame.from_csv(StringIO(All_Data.text))
+df_sfdc_all_data = df_sfdc_all_data.to_csv('Header.csv', encoding = 'utf-8')
+All_Data_File = pd.read_csv('Header.csv')
+print(All_Data)
+Sales_Column= session.get("https://na4.salesforce.com/xxxxxxxxxxxxxxxxx?export=1&enc=UTF-8&xf=csv".format(xxxxxxxxxxxxxxxxx), headers=sf.headers, cookies={'sid': sf.session_id})
+df_sfdc_Sales_data= pd.DataFrame.from_csv(StringIO(Sales_Column.text))
+df_sfdc_Sales_data =df_sfdc_Sales_data.to_csv('Sales_column.csv', encoding = 'utf-8') #file saved 
+Sales_file = pd.read_csv('Sales_column.csv') #read it
+Sales_file['new'] = ('/')
+Sales_file = Sales_file.dropna(subset = ['PO Number'])
+Sales_file['Check'] = Sales_file.apply(lambda row: row['new'] in row['PO Number'], axis=1)
+Sales_file = Sales_file.drop('PO Number', axis=1) \
+            .join(Sales_file['PO Number'] \
+            .str \
+            .split('/', expand=True) \
+            .stack() \
+            .reset_index(level=1, drop=True).rename('PO Number')) \
+            .reset_index(drop=True)
+Sales_file = Sales_file.drop('PO Number', axis=1) \
+            .join(Sales_file['PO Number'] \
+            .str \
+            .split(',', expand=True) \
+            .stack() \
+            .reset_index(level=1, drop=True).rename('PO Number')) \
+            .reset_index(drop=True)
+print(Sales_file)
+
+merged_data_frame = pd.merge(Sales_file, All_Data_File, left_on ='Sold-To CDH Party: CDH Party Number',  right_on = 'CDH Party')
+Owner_Name_file = pd.read_csv('Owner.csv') #read it
+All_Merged = pd.merge(merged_data_frame, Owner_Name_file, on = 'Bill-To Party Name',  )
+cols = list(All_Merged.columns.values)
+All_Merged['Assigned To'] = (xxxxxxxxxxxxxxxxx)
+
+print(merged_data_frame)
+All_Merged= All_Merged[['Sold-To CDH Party: CDH Party Number','Opportunity Header Staging ID','Country of Order','Account ID','Opportunity Owner',
+ 'Name', 'Assigned To: Full Name', 'Assigned To', 'PO Number', 'Check']]
+All_Merged['Country of Order'] =  ('Japan')
+All_Merged = All_Merged.dropna(subset = ['Sold-To CDH Party: CDH Party Number'])
+All_Merged= All_Merged.rename(columns = {'Account ID':'Sales Account','Opportunity Header Staging ID':'ID'})
+print (All_Merged)
+
+writer = pd.ExcelWriter(datetime.now().strftime('manual_staging_%d-%m-%Y.xlsx'))
+All_Merged.to_excel(writer,'manual_staging')
+writer.save()
+
+
+data_set_upload = pd.merge (All_Merged, sliced_data, left_on='ID', right_on = 'Opportunity Header Staging ID_x')
+data_set_upload['sfdc'] = ('https://c.na4.visual.force.com/')
+data_set_upload['link'] = data_set_upload['sfdc']+''+data_set_upload['ID']
+data_set_upload['Assigned To'] = (xxxxxxxxxxxxxxxxxxxx)
+data_set_upload= data_set_upload.rename(columns = {'Account ID':'Sales Account','Opportunity Header Staging ID':'ID'})
+data_set_upload= data_set_upload[['ID','Country of Order','Sales Account','Opportunity Owner','Check',
+ 'Name', 'Assigned To: Full Name','Assigned To', 'link', 'PO Number']]
+data_set_upload = data_set_upload.drop_duplicates('ID')
+
+
+writer = pd.ExcelWriter(datetime.now().strftime('auto_staging_%d-%m-%Y.xlsx'))
+data_set_upload.to_excel(writer,'auto_staging')
+writer.save()
+
+#reading renewals file from winSCP.
+#Match of "staging - PO" to "renewal File - PO". Problem statement :
+#Match of files should give all possible matches and highlight the same.
+#single value matched with multiple numbers need to be reported.
+#points to remember both X and Y axis could have multiple matches.
+
+dis_file = pd.read_excel(xxx_FY17Q3_FY18Q2_BookingData_v.1.xlsx')
+dis_file = dis_file[['Renewal PO.', 'Opportunity#', 'Process Date', '発注番号']]
+dis_file = dis_file.dropna(subset = ['Renewal PO.', 'Opportunity#'])
+print(dis_file)
+
+fmw_file = pd.read_excel(xxx_FY17Q3_FY18Q2_BookingData_v.1.xlsx')
+fmw_file = fmw_file[['Renewal PO.', 'Opportunity#', 'Process Date', '発注番号']]
+fmw_file = fmw_file.dropna(subset = ['Renewal PO.', 'Opportunity#'])
+print(fmw_file)
+
+sios_file = pd.read_excel(xxxx_FY17Q3_FY18Q2_BookingData_v.1.xlsx')
+sios_file = sios_file[['Renewal PO.', 'Opportunity#', 'Process Date', '発注番号']]
+sios_file = sios_file.dropna(subset = ['Renewal PO.', 'Opportunity#'])
+print(sios_file)
+
+sbb_file = pd.read_excel(xxxx_FY17Q3_FY18Q2_BookingData_v.1.xlsx')
+sbb_file = sbb_file[['Renewal PO.', 'Opportunity#', 'Process Date', '発注番号']]
+sbb_file = sbb_file.dropna(subset = ['Renewal PO.', 'Opportunity#'])
+print(sbb_file)
+
+all_files2 = dis_file.append(xxx_file, ignore_index =True)
+all_files1= all_files2.append(xxxx_file, ignore_index =True)
+all_files =  all_files1.append(xxxxxx_file, ignore_index =True)
+all_files['Renewal PO.'] = all_files['Renewal PO.'].astype(str)
+print(all_files)
+
+#the auto and manual dataset with renewals  file.
+merged_renewals_manual = pd.merge(All_Merged, all_files, left_on = 'PO Number', right_on = 'Renewal PO.')
+
+print(merged_renewals_manual)
+
+merged_with_po = pd.ExcelWriter(datetime.now().strftime('C:\\Users\magiri\Google Drive\Python_files\File_upload_shared\PO.merged_%d%m%y.xlsx'))
+merged_renewals_manual.to_excel(merged_with_po,'merged')
+merged_with_po.save()
+
+
